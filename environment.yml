@@ -1,0 +1,18 @@
+name: deepisp-theano
+dependencies:
+- python=3.6
+- anaconda
+- spyder
+- numpy
+- scipy
+- scikit-learn
+- tabulate
+- scikit-image
+- h5py
+- pip
+- pip:
+    - Theano==0.8
+    - git+https://github.com/Lasagne/Lasagne.git@8f4f9b2#egg=Lasagne==0.2.git
+    - git+https://github.com/dnouri/nolearn.git@master#egg=nolearn==0.7.git
+    - rawpy
+#   
