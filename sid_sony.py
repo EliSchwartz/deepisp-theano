@@ -2,15 +2,15 @@ import os
 import os.path
 
 import numpy as np
-import torch.utils.data as data
+# import torch.utils.data as data
 # from PIL import Image
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
+# import matplotlib.pyplot as plt
+# from sklearn.model_selection import train_test_split
 import glob
-import utils
+from common import utils
 import rawpy
 from tqdm import tqdm, trange
-import h5py
+# import h5py
 
 def pack_raw(raw):
 
@@ -22,7 +22,7 @@ def pack_raw(raw):
     return im
 
 
-class SID_Sony(data.Dataset):
+class SID_Sony():
     """`Learning to see in the dark' Sony Dataset.
 
     Args:
@@ -55,7 +55,7 @@ class SID_Sony(data.Dataset):
         for i in range(len(self.fns)):
             _, fn = os.path.split(self.fns[i])
             self.ids.append(int(fn[0:5]))
-        self.ids = self.ids[:1]
+        # self.ids = self.ids[:2]
 
         self.gt_images = []#[0] * len(self.ids)
         self.input_images = []
@@ -85,11 +85,12 @@ class SID_Sony(data.Dataset):
             gt_path = gt_files[0]
             gt_raw = rawpy.imread(gt_path)
             im = gt_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
-            self.gt_images.append(np.transpose(np.float32(im / 65535.0), (2, 0, 1)))
+
 
             in_files = glob.glob(self.input_dir + '%05d_00*.ARW' % train_id)
             for in_path in in_files:
             # in_path = in_files[np.random.random_integers(0, len(in_files) - 1)]
+                self.gt_images.append(np.transpose(np.float32(im / 65535.0), (2, 0, 1)))
                 _, in_fn = os.path.split(in_path)
                 _, gt_fn = os.path.split(gt_path)
                 in_exposure = float(in_fn[9:-5])
@@ -100,6 +101,8 @@ class SID_Sony(data.Dataset):
                 self.input_images.append(pack_raw(raw) * ratio)
                 self.gt_ind.append(ind)
                 self.fnames.append((in_fn.encode(),gt_fn.encode()))
+        self.gt_images = np.stack(self.gt_images)
+        self.input_images = np.stack(self.input_images)
         # with h5py.File(save_data_path, 'w') as f:
         #     f.create_dataset('gt_images',data=self.gt_images)
         #     f.create_dataset('input_images',data=self.input_images)

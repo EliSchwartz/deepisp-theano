@@ -30,7 +30,25 @@ def imread(filepath):
     else:
         return io.imread(filepath)
         
-        
+def regress_pair_images(im1,im2):
+    assert(im1.shape[0]==3)
+    assert(im2.shape[0]==3)
+
+    step = 10
+    im1 = im1[:,::step,::step]
+    im2 = im2[:,::step,::step]
+
+    im1 = im1.reshape([3,-1]).transpose([1,0])
+    im2 = im2.reshape([3,-1]).transpose([1,0])
+
+    im1 = np.concatenate([im1, np.ones_like(im1[:,0:1])], axis=1)
+
+    T = np.linalg.lstsq(im1,im2)
+
+    return T[0]
+
+
+
 
 def is_ec2():
     import socket
@@ -85,6 +103,11 @@ def mosaic_then_demosaic(rgb, pattern = 'grbg'):
         mask[1,0::2,1::2] = 1 # g1
         mask[1,1::2,0::2] = 1 # g2
         mask[2,1::2,1::2] = 1 # b
+    elif pattern == 'gbrg':
+        mask[0, 1::2, 0::2] = 1  # r
+        mask[1, 0::2, 0::2] = 1  # g1
+        mask[1, 1::2, 1::2] = 1  # g2
+        mask[2, 0::2, 1::2] = 1  # b
     else:
         raise NotImplementedError
         

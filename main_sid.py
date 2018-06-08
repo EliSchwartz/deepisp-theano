@@ -17,16 +17,16 @@ OVERRIDE_OUTPUT_DIR = False
 exp_name = 'base'
 
 train_params = {
-    'MAX_EPOCHS'                    :   0             ,
+    'MAX_EPOCHS'                    :   70             ,
     'LEARNING_RATE_INITIAL'         :   5e-5             ,
     'BATCH_SIZE'                    :   2**0             ,
-    'TRAIN_VALID_SPLIT'             :   0.1             ,
+    'TRAIN_VALID_SPLIT'             :   0             ,
 }
 
 params = {
     'TRAIN_PARAMS'                  :   train_params    ,
     'IN_PATCH_SIZE'                 :   1024               ,
-    'TEST_EVERY_N_EPOCHS'           :   train_params['MAX_EPOCHS']//10,
+    'TEST_EVERY_N_EPOCHS'           :   10,
     'NOISE_TYPE'                    :   'Gaussian'      ,
     'SIGMA'                         :   25.0              ,
     }
@@ -50,7 +50,7 @@ from skimage import io, color, exposure
 import matplotlib.pyplot as plt
 from theano import tensor as T
 from matplotlib import colors
-from datasets import raw2rgb_dataset
+from sid_sony import SID_Sony
 import pickle
 from lasagne.layers import Pool2DLayer as PoolLayer
 from scipy.misc import imresize
@@ -120,38 +120,38 @@ def test_net(nn, train_history=[]):
     y_ = np.transpose(yt, [0,2,3,1])
     y_h = np.transpose(y_h, [0,2,3,1])
   
-    X_ = utils.change_range(X_, [-0.5,0.5], [0,1])
-    y_ = utils.change_range(y_, [-0.5,0.5], [0,1])
-    y_h = utils.change_range(y_h, [-0.5,0.5], [0,1])
+    # X_ = utils.change_range(X_, [0,0.5], [0,1])
+    # y_ = utils.change_range(y_, [0,0.5], [0,1])
+    # y_h = utils.change_range(y_h, [0,0.5], [0,1])
     
-    with open(out_dir + '/results.csv', 'w') as f:
-        f.write('image,psnr\n')
-        for i in range(X_.shape[0]):
-            f.write(test_scene_names[i] + ',{}\n'.format(utils.calc_psnr(y_[i,...],y_h[i,...], max_val=1.0)))
+    # with open(out_dir + '/results.csv', 'w') as f:
+    #     f.write('image,psnr\n')
+    #     for i in range(X_.shape[0]):
+    #         f.write(test_scene_names[i] + ',{}\n'.format(utils.calc_psnr(y_[i,...],y_h[i,...], max_val=1.0)))
     
         
     X_ = X_.clip(0, 1)
     y_ = y_.clip(0, 1)
     y_h = y_h.clip(0, 1)
     
-#    X_ = utils.srgb_gamma(X_)
-#    y_ = utils.srgb_gamma(y_)
-#    y_h = utils.srgb_gamma(y_h)
+    X_ = utils.srgb_gamma(X_)
+    y_ = utils.srgb_gamma(y_)
+    y_h = utils.srgb_gamma(y_h)
 
     X_ = (255*X_).astype(np.uint8)
     y_ = (255*y_).astype(np.uint8)
     y_h = (255*y_h).astype(np.uint8)
     
     for i in range(X_.shape[0]):
-#        io.imsave(
-#            os.path.join(output_test_imgs_dir, test_scene_names[i] + '_noisy.png'), 
-#            X_[i,...])
         io.imsave(
-            os.path.join(output_test_imgs_dir, test_scene_names[i] + '_out.png'), 
+           os.path.join(output_test_imgs_dir, test_scene_names[i][0].decode() + '_noisy.jpg'),
+           X_[i,...])
+        io.imsave(
+            os.path.join(output_test_imgs_dir, test_scene_names[i][0].decode() + '_out.jpg'),
             y_h[i,...])
-#        io.imsave(
-#            os.path.join(output_test_imgs_dir, test_scene_names[i] + '_gt.png'), 
-#            y_[i,...])
+        io.imsave(
+           os.path.join(output_test_imgs_dir, test_scene_names[i][0].decode() + '_gt.jpg'),
+           y_[i,...])
     
     nn.save_params_to(out_dir + '/params.pickle')        
 #    pickle.dump( nn, open(out_dir + '/net.pickle', "wb" ) )
@@ -197,26 +197,44 @@ num_epochs_to_do = max(params["TRAIN_PARAMS"]["MAX_EPOCHS"] - len(training_stats
 
 print('Loading dataset...')   
 t = time.time()
-hf = h5py.File('/data/eli/datasets/full_images.h5', 'r')
-# X = hf['X'][:]
-# y = hf['y'][:]
-Xt = hf['Xt'][:]
-yt = hf['yt'][:]
+# hf = h5py.File('/data/eli/datasets/full_images.h5', 'r')
+# # X = hf['X'][:]
+# # y = hf['y'][:]
+# Xt = hf['Xt'][:]
+# yt = hf['yt'][:]
+#
+# Ts = hf['train_oracle_color_trans'][:]
+# color_trans_init = np.median(Ts,axis=0)
+#
+# test_scene_ids = hf['test_scene_ids'][:]
+# test_scene_names = [str(scene[0]) + '_' + str(scene[1]) for scene in test_scene_ids]
+# hf.close()
 
-Ts = hf['train_oracle_color_trans'][:]
-color_trans_init = np.median(Ts,axis=0)
+trainset = SID_Sony(subset='train')
+# valset = SID_Sony(subset='val')
+testset = SID_Sony(subset='test')
 
-test_scene_ids = hf['test_scene_ids'][:]
-test_scene_names = [str(scene[0]) + '_' + str(scene[1]) for scene in test_scene_ids]
-hf.close()
+X = trainset.input_images
+y = trainset.gt_images
+Xt = testset.input_images
+yt = testset.gt_images
+test_scene_names = testset.fnames
+
 print('Finished Loading dataset (took {}s)'.format(int(time.time()-t)),flush=True)
+
+y = utils.srgb_gamma_inv(y)
+yt = utils.srgb_gamma_inv(yt)
+
+# Ts = np.stack([utils.regress_pair_images(xi, xj) for (xi, xj) in zip(X,y)])
+# T = np.median(Ts,axis=0)
+# T = np.concatenate((T[:3,:],np.zeros([6,3],dtype=T.dtype),T[3:4,:]))
 
 
 layers = models.denoising_and_coloring( (None,3,params['IN_PATCH_SIZE'],params['IN_PATCH_SIZE']),
                                         flatten=False, 
                                         num_denoise_layers=15,
-                                        num_coloring_layers=3,
-                                        color_trans_init=color_trans_init)
+                                        num_coloring_layers=3,)
+                                        # color_trans_init=T)
 
 #from common import models
 net = nl.NeuralNet(

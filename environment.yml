@@ -1,6 +1,6 @@
 name: deepisp-theano
 dependencies:
-- python=3.6
+- python=3.5
 - anaconda
 - spyder
 - numpy
@@ -9,6 +9,7 @@ dependencies:
 - tabulate
 - scikit-image
 - h5py
+- tqdm
 - pip
 - pip:
     - Theano==0.8
