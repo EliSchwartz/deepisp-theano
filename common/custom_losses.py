@@ -18,7 +18,7 @@ import os
 import pickle
 
 def rgb2lab ( rgb ) :
-    rgb += 0.5 # assumin input is in [-0.5,0.5]
+#    rgb += 0.5 # assumin input is in [-0.5,0.5]
     rgb = T.clip(rgb, 0, 1)
 #    rgb = T.switch(T.gt(rgb,0.04045), ((rgb+0.055)/1.055)**2.4, rgb/12.92)
     rgb *= 100
