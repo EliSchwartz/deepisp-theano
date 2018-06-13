@@ -36,7 +36,7 @@ class SID_Sony():
 
 
 
-    def __init__(self, root='/data/datasets/SID/Learning-to-See-in-the-Dark/dataset/Sony', subset='train', transform=None):
+    def __init__(self, root='/data/datasets/SID/Learning-to-See-in-the-Dark/dataset/Sony', subset='train', transform=None, max_images=None):
 
         self.root = os.path.expanduser(root)
         self.transform = transform
@@ -55,7 +55,8 @@ class SID_Sony():
         for i in range(len(self.fns)):
             _, fn = os.path.split(self.fns[i])
             self.ids.append(int(fn[0:5]))
-        # self.ids = self.ids[:2]
+        if max_images is not None:
+            self.ids = self.ids[:max_images]
 
         self.gt_images = []#[0] * len(self.ids)
         self.input_images = []
